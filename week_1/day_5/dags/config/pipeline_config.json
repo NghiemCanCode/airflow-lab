@@ -1,0 +1,6 @@
+{
+  "source_directory": "/opt/airflow/dags/data_incoming",
+  "file_pattern": ".csv",
+  "target_table": "daily_sales_analytics",
+  "min_file_size_bytes": 10
+}
