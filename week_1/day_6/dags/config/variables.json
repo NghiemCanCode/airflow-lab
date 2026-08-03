@@ -1,0 +1,8 @@
+{
+  "lab6_pipeline_config": {
+    "source_dir": "/opt/airflow/dags/data_incoming",
+    "batch_size": 100,
+    "exchange_rate_usd_vnd": 25400,
+    "enable_strict_validation": true
+  }
+}

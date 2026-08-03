@@ -1,0 +1,3 @@
+order_id,customer_id,amount,status
+ORD201,2001,500.00,PENDING
+ORD202,2002,1200.00,COMPLETED

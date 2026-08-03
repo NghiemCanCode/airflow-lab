@@ -1,0 +1,2 @@
+order_id,customer_id,amount,status
+ORD301,3001,750.00,COMPLETED
