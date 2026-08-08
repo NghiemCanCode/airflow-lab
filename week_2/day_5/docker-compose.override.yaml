@@ -1,0 +1,6 @@
+services:
+  airflow-worker:
+    user: "0:0"  # Ép riêng airflow-worker chạy bằng quyền root để đọc/ghi được docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data

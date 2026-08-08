@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1
+# Bổ sung /app/src vào đường dẫn tìm kiếm module của Python
+ENV PYTHONPATH=/app/src
+
+WORKDIR /app
+
+# Cài đặt thư viện phụ thuộc
+RUN pip install --no-cache-dir pandas==2.2.0
+
+# Copy mã nguồn vào /app/src/
+COPY src/ /app/src/
+
+ENTRYPOINT ["python", "-m", "etl_engine.cli"]
