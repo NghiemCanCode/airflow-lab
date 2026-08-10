@@ -1,0 +1,6 @@
+app_env: "development"
+pipeline_name: "user_scoring_pipeline"
+data_processing:
+  min_score_threshold: 0
+  bonus_multiplier: 1.2
+logging_level: "INFO"
