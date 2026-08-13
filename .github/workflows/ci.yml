@@ -1,0 +1,56 @@
+name: Airflow DAG CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**' ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Step 1 - Code Linting (Flake8)
+        run: |
+          # Dừng build nếu có lỗi syntax Python hoặc undefined names
+          flake8 dags tests --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Cảnh báo các lỗi format nhẹ
+          flake8 dags tests --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+
+      - name: Step 2 - Run Unit Tests (Pytest)
+        env:
+          PYTHONPATH: ${{ github.workspace }}/dags:${${ github.workspace }}
+        run: |
+          pytest tests/unit --verbose --cov=dags/include
+
+      - name: Step 3 - DAG Integrity & Policy Validation
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${${ github.workspace }}/dags
+          AIRFLOW__CORE__UNIT_TEST_MODE: "True"
+        run: |
+          pytest tests/dags --verbose
+
+      - name: Step 4 - Headless Airflow CLI Parse Check
+        env:
+          AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+        run: |
+          # Đảm bảo lệnh CLI parse thành công DAGs
+          airflow dags list
+          airflow dags list-import-errors
