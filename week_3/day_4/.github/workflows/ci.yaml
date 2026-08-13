@@ -2,9 +2,11 @@ name: Airflow DAG CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, 'feature/**' ]
   pull_request:
     branches: [ main ]
+
+  workflow_dispatch:
 
 jobs:
   lint-and-test:
