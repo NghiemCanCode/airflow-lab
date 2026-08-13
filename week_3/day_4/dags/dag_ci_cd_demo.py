@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 default_args = {
     'owner': 'data_platform_team',
+    'retries': 2,
     'retry_delay': timedelta(minutes=1),
 }
 
