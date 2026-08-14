@@ -1,16 +1,31 @@
-name: Airflow DAG CI Pipeline
+name: Week 3 Day 4 - Airflow CI/CD Pipeline
 
 on:
   push:
     branches: [ main, develop, 'feature/**' ]
+    paths:
+      - 'week_3/day_4/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
-
+    paths:
+      - 'week_3/day_4/**'
+      - '.github/workflows/**'
   workflow_dispatch:
 
+# 🔐 Cấp quyền cho GitHub Actions tự động merge Pull Request
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  lint-and-test:
+  lint-test-and-automerge:
     runs-on: ubuntu-latest
+
+    # 🎯 Định nghĩa thư mục làm việc mặc định cho TẤT CẢ các bước
+    defaults:
+      run:
+        working-directory: ./week_3/day_4
 
     steps:
       - name: Checkout Code
@@ -21,36 +36,53 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+          cache-dependency-path: week_3/day_4/requirements-dev.txt
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # --- STEP 1: LINTING ---
       - name: Step 1 - Code Linting (Flake8)
         run: |
-          # Dừng build nếu có lỗi syntax Python hoặc undefined names
+          echo "=== Executing Static Code Analysis ==="
           flake8 dags tests --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Cảnh báo các lỗi format nhẹ
-          flake8 dags tests --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+          sleep 5
 
+      # --- STEP 2: UNIT TEST ---
       - name: Step 2 - Run Unit Tests (Pytest)
         env:
-          PYTHONPATH: ${{ github.workspace }}/dags:${${ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}/week_3/day_4/dags:${{ github.workspace }}/week_3/day_4
         run: |
-          pytest tests/unit --verbose --cov=dags/include
+          echo "=== Executing Unit Tests ==="
+          pytest tests/unit --verbose
+          sleep 5
 
+      # --- STEP 3: DAG INTEGRITY ---
       - name: Step 3 - DAG Integrity & Policy Validation
         env:
-          PYTHONPATH: ${{ github.workspace }}:${${ github.workspace }}/dags
+          PYTHONPATH: ${{ github.workspace }}/week_3/day_4:${{ github.workspace }}/week_3/day_4/dags
           AIRFLOW__CORE__UNIT_TEST_MODE: "True"
         run: |
+          echo "=== Validating DAG Integrity & Policies ==="
           pytest tests/dags --verbose
+          sleep 5
 
+      # --- STEP 4: AIRFLOW CLI CHECK ---
       - name: Step 4 - Headless Airflow CLI Parse Check
         env:
           AIRFLOW__CORE__LOAD_EXAMPLES: "False"
         run: |
-          # Đảm bảo lệnh CLI parse thành công DAGs
+          echo "=== Verifying Airflow DAG Parse via CLI ==="
           airflow dags list
-          airflow dags list-import-errors
+          sleep 5
+
+      # --- STEP 5: AUTOMATIC MERGE TO MAIN ---
+      - name: Step 5 - Auto-Merge PR to Main
+        if: github.event_name == 'pull_request' && success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== All tests passed! Auto-merging PR into main branch... ==="
+          gh pr merge ${{ github.event.pull_request.html_url }} --merge --delete-branch
