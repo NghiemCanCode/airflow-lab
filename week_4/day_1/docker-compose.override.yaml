@@ -1,0 +1,65 @@
+name: ${COMPOSE_PROJECT_NAME}
+
+x-airflow-common-base: &airflow-common
+  image: ${AIRFLOW_IMAGE_NAME}
+  env_file: []  # Bỏ yêu cầu file .env ở gốc
+  environment:
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__FERNET_KEY: 't_2q_R1-Z4G...='
+    AIRFLOW_ENV: ${AIRFLOW_ENV}
+    MINIO_ENDPOINT: "http://minio:9000"
+    MINIO_USER: ${MINIO_ROOT_USER}
+    MINIO_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    MINIO_BUCKET: ${MINIO_BUCKET}
+    # Connection String chuẩn AWS S3 URI cho Airflow Provider
+    AIRFLOW_CONN_MINIO_S3_CONN: "aws://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@?endpoint_url=http%3A%2F%2Fminio%3A9000"
+
+services:
+  # Ghi đè trực tiếp từng service để áp dụng cấu hình từ override
+  airflow-scheduler:
+    <<: *airflow-common
+
+  airflow-worker:
+    <<: *airflow-common
+
+  airflow-apiserver:
+    <<: *airflow-common
+    ports:
+      - "${AIRFLOW_UI_PORT}:8080"
+
+  airflow-triggerer:
+    <<: *airflow-common
+
+  airflow-cli:
+    <<: *airflow-common
+
+  airflow-init:
+    <<: *airflow-common
+
+  minio:
+    image: minio/minio:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-minio
+    ports:
+      - "${MINIO_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio-create-bucket:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      /usr/bin/mc mb myminio/${MINIO_BUCKET} || true;
+      exit 0;
+      "

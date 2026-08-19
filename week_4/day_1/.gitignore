@@ -1,0 +1,8 @@
+# .gitignore
+config/envs/.env.*
+.env
+!config/envs/.env.example
+logs/
+plugins/
+*.pyc
+__pycache__/
